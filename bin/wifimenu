@@ -1,0 +1,78 @@
+#!/bin/bash
+
+
+#Current connection
+net=$(nmcli --field "Name" connection show --active | grep -v "^lo[[:space:]]" | sed '1d')
+if [ "$net" = "" ]; then
+  net="None"
+fi
+
+#is wifi enabled
+state=$(nmcli radio wifi)
+if [ $state = "enabled" ]; then
+  opt="---DISABLE Wi-Fi---"
+else
+  opt="---ENABLE Wi-Fi---"
+fi
+
+#list of all scaned wifi
+wifi_list=$(nmcli --field "BARS,SECURITY,CHAN,SSID" device wifi list | sed 1d | sed -E "s/WPA*.?\S/  /g" | sed "s/802\.1X//g" | sed "s/ \+//g" | sed "s/   \+/  /g" | awk '{for(i=1;i<=NF;i++)if($i>=1&&$i<=13)$i="2.4GHz";else if($i>=14&&$i<=200)$i="5GHz  "}1') 
+wifi_list_opt="$wifi_list\n$opt"
+
+#rofi menu to chose net
+chosen_net=$(echo -e "$wifi_list_opt" | rofi -dmenu -p $net)
+
+
+if [ "$chosen_net" = "" ]; then
+  exit
+elif [ "$chosen_net" = "---DISABLE Wi-Fi---" ]; then
+  nmcli radio wifi off
+  notify-send "Wi-Fi Disabled"
+elif [ "$chosen_net" = "---ENABLE Wi-Fi---" ]; then 
+  nmcli radio wifi on
+  notify-send "Starting Wi-Fi..."
+  sleep 3
+  ./wifimenu
+else
+  chosen_name=$(echo "${chosen_net:14}")
+
+  #getting MAC of chosen net
+  if [[ $chosen_net =~ "5GHz" ]]; then
+    net_bssid=$(nmcli --field BSSID,SSID,CHAN device wifi list | grep $chosen_name | grep -Ev "( 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 )")
+  else
+    net_bssid=$(nmcli --field BSSID,SSID,CHAN device wifi list | grep $chosen_name | grep -E "( 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 )")
+  fi
+  net_bssid="${net_bssid:0:17}"
+  
+  #list of all saved networks
+  saved_net=$(nmcli -g NAME connection)
+  #information about chosen net
+  net_info=$(nmcli --field BSSID,SSID,RATE,SIGNAL,SECURITY device wifi list | grep $net_bssid | awk '{print "MAC:",$1 ,"\nNAME:",$2, "\nRATE:",$3,$4, "\nSIGNAL:",$5,"%", "\nSECURITY:",$6,$7,$8}')
+  
+  #options if chosen net is already saved
+  if [[ $saved_net =~ $chosen_name ]]; then
+    net_info="$net_info\n---CONNECT---\n---DELETE---"
+  else
+    net_info="$net_info\n---ENTER PASSWORD---"
+  fi
+  
+  #chose option(connect/delete)
+  option=$(echo -e "$net_info" | rofi -dmenu)
+  
+  case "$option" in
+
+    "---CONNECT---")
+      nmcli device wifi connect $net_bssid
+      notify-send "Wi-Fi connected"
+      ;;
+    
+    "---DELETE---")
+      nmcli connection delete $chosen_name
+      notify-send "Connection deleted"  
+    ;;
+
+    "---ENTER PASSWORD---")
+      password=$(rofi -dmenu -password -p "Enter password:")
+      nmcli device wifi connect $net_bssid password $password
+    esac
+fi 

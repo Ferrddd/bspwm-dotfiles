@@ -1,0 +1,3 @@
+alias logout="pkill -KILL -u "$USER""
+alias sus="systemctl suspend"
+alias lock="$HOME/bin/lock"

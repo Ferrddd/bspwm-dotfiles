@@ -1,0 +1,25 @@
+[font]
+size = 16
+
+[font.bold]
+family = "UbuntuMonoNerdFont"
+style = "Bold"
+
+[font.bold_italic]
+family = "UbuntuMonoNerdFont"
+style = "Bold Italic"
+
+[font.italic]
+family = "UbuntuMonoNerdFont"
+style = "Italic"
+
+[font.normal]
+family = "UbuntuMonoNerdFont"
+style = "Regular"
+
+
+[[keyboard.bindings]]
+key = "Return"
+mods = "Shift|Super"
+command = {program ="/home/tim/bin/copyterminal"}
+

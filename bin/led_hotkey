@@ -1,0 +1,11 @@
+#!/bin/bash
+
+path="/sys/class/leds/asus::kbd_backlight/brightness"
+val=$(cat $path)
+
+if [ $val -ge 3 ]; then
+  echo 0 > $path
+else
+  echo $((val+1)) > $path
+fi
+

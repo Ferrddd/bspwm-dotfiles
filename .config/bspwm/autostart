@@ -1,0 +1,11 @@
+pgrep -x sxhkd > /dev/null || sxhkd -f &
+$HOME/.config/polybar/launch.sh & 
+picom &
+xsetroot -cursor_name left_ptr &
+setxkbmap -model pc105 -layout us,ru -option grp:alt_shift_toggle & 
+xinput set-prop $(xinput list | grep -i touchpad | grep -oP 'id=\K[0-9]+') "libinput Tapping Enabled" 1 &
+nitrogen --restore &
+xss-lock -- /home/tim/bin/lock &
+
+$HOME/soft/skripts/ffoxstart.sh &
+Telegram &
