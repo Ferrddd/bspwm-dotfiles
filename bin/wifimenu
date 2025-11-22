@@ -16,13 +16,12 @@ else
 fi
 
 #list of all scaned wifi
-wifi_list=$(nmcli --field "BARS,SECURITY,CHAN,SSID" device wifi list | sed 1d | sed -E "s/WPA*.?\S/  /g" | sed "s/802\.1X//g" | sed "s/ \+//g" | sed "s/   \+/  /g" | awk '{for(i=1;i<=NF;i++)if($i>=1&&$i<=13)$i="2.4GHz";else if($i>=14&&$i<=200)$i="5GHz  "}1') 
-wifi_list_opt="$wifi_list\n$opt"
+wifi_list=$(nmcli --field "BARS,SECURITY,SSID" device wifi list | sed 1d | sed -E "s/WPA*.?\S/  /g" | sed "s/802\.1X//g" | sed "s/ \+//g" | sed "s/   \+/  /g" | grep -v " -- *$") 
+wifi_list_opt="$wifi_list\n$opt\n---RESCAN---"
 
 #rofi menu to chose net
 chosen_net=$(echo -e "$wifi_list_opt" | rofi -dmenu -p $net)
-
-
+chosen_name=$(echo "${chosen_net:9}" | sed "s/ //g")
 if [ "$chosen_net" = "" ]; then
   exit
 elif [ "$chosen_net" = "---DISABLE Wi-Fi---" ]; then
@@ -33,24 +32,18 @@ elif [ "$chosen_net" = "---ENABLE Wi-Fi---" ]; then
   notify-send "Starting Wi-Fi..."
   sleep 3
   ./wifimenu
+elif [ "$chosen_net" = "---RESCAN---" ]; then
+  notify-send "Rescaning..."
+  nmcli device wifi rescan
+  sleep 3
+  ./wifimenu
 else
-  chosen_name=$(echo "${chosen_net:14}")
-
-  #getting MAC of chosen net
-  if [[ $chosen_net =~ "5GHz" ]]; then
-    net_bssid=$(nmcli --field BSSID,SSID,CHAN device wifi list | grep $chosen_name | grep -Ev "( 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 )")
-  else
-    net_bssid=$(nmcli --field BSSID,SSID,CHAN device wifi list | grep $chosen_name | grep -E "( 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 )")
-  fi
-  net_bssid="${net_bssid:0:17}"
-  
   #list of all saved networks
   saved_net=$(nmcli -g NAME connection)
   #information about chosen net
-  net_info=$(nmcli --field BSSID,SSID,RATE,SIGNAL,SECURITY device wifi list | grep $net_bssid | awk '{print "MAC:",$1 ,"\nNAME:",$2, "\nRATE:",$3,$4, "\nSIGNAL:",$5,"%", "\nSECURITY:",$6,$7,$8}')
-  
+  net_info=$(nmcli --field ssid,rate,signal,security device wifi list | grep -m 1 $chosen_name | awk '{print "name:",$1, "\nrate:",$2,$3, "\nsignal:",$4,"%", "\nsecurity:",$5,$6,$7}' | uniq -u)
   #options if chosen net is already saved
-  if [[ $saved_net =~ $chosen_name ]]; then
+  if [[ "$saved_net" =~ "$chosen_name" ]]; then
     net_info="$net_info\n---CONNECT---\n---DELETE---"
   else
     net_info="$net_info\n---ENTER PASSWORD---"
@@ -62,7 +55,8 @@ else
   case "$option" in
 
     "---CONNECT---")
-      nmcli device wifi connect $net_bssid
+      notify-send "Connecting..."
+      nmcli device wifi connect $chosen_name
       notify-send "Wi-Fi connected"
       ;;
     
@@ -72,7 +66,19 @@ else
     ;;
 
     "---ENTER PASSWORD---")
-      password=$(rofi -dmenu -password -p "Enter password:")
-      nmcli device wifi connect $net_bssid password $password
+      while true; do
+        password=$(rofi -dmenu -password -p "Enter password:")
+        if [ -z "$password" ]; then
+          notify-send "Connection canceled"
+          exit
+        fi
+        if echo $password | nmcli device wifi connect $chosen_name --ask; then
+          notify-send "✅ Connected to $chosen_name"
+          exit
+        else
+          notify-send "Wi-Fi" "❌ Wrong password. Try again."
+          nmcli connection delete "$chosen_name" >> /dev/null
+        fi
+      done
     esac
 fi 
