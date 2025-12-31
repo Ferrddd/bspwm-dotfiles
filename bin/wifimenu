@@ -16,7 +16,7 @@ else
 fi
 
 #list of all scaned wifi
-wifi_list=$(nmcli --field "BARS,SECURITY,SSID" device wifi list | sed 1d | sed -E "s/WPA*.?\S/  /g" | sed "s/802\.1X//g" | sed "s/ \+//g" | sed "s/   \+/  /g" | grep -v " -- *$") 
+wifi_list=$(nmcli --field "BARS,SECURITY,SSID" device wifi list | sed 1d | sort -k3,3 -u | sort -r -k1,1 | sed -E "s/WPA*.?\S/  /g" | sed "s/802\.1X//g" | sed "s/ \+//g" | sed "s/   \+/  /g" | grep -v " -- *$") 
 wifi_list_opt="$wifi_list\n$opt\n---RESCAN---"
 
 #rofi menu to chose net
