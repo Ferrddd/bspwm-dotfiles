@@ -15,7 +15,7 @@
 - **Launcher**: [rofi](https://github.com/davatorium/rofi)
 - **Compositor**: [picom](https://github.com/yshui/picom)
 - **File manager**: [ranger](https://github.com/ranger/ranger)
-- **OS**: Arch Linux (но конфиги легко адаптируются под любой дистрибутив)
+- **OS**: [Arch Linux](https://archlinux.org/)
 
 ---
 
